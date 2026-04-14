@@ -476,6 +476,12 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 		if upstream.Host.activeHealthFails() >= h.HealthChecks.Active.Fails {
 			// dispatch an event that the host newly became unhealthy
 			if upstream.setHealthy(false) {
+				if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "host is down"); c != nil {
+					c.Write(
+						zap.String("host", hostAddr),
+						zap.String("upstream", upstream.Dial),
+					)
+				}
 				h.events.Emit(h.ctx, "unhealthy", map[string]any{"host": hostAddr})
 				upstream.Host.resetHealth()
 			}
@@ -497,7 +503,10 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 		if upstream.Host.activeHealthPasses() >= h.HealthChecks.Active.Passes {
 			if upstream.setHealthy(true) {
 				if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "host is up"); c != nil {
-					c.Write(zap.String("host", hostAddr))
+					c.Write(
+						zap.String("host", hostAddr),
+						zap.String("upstream", upstream.Dial),
+					)
 				}
 				h.events.Emit(h.ctx, "healthy", map[string]any{"host": hostAddr})
 				upstream.Host.resetHealth()
@@ -533,6 +542,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "unexpected status code"); c != nil {
 				c.Write(
 					zap.Int("status_code", resp.StatusCode),
+					zap.Int("expected_status", h.HealthChecks.Active.ExpectStatus),
 					zap.String("host", hostAddr),
 				)
 			}
@@ -567,6 +577,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "response body failed expectations"); c != nil {
 				c.Write(
 					zap.String("host", hostAddr),
+					zap.String("expected_body_pattern", h.HealthChecks.Active.ExpectBody),
 				)
 			}
 			markUnhealthy()
