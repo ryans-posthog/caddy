@@ -218,6 +218,19 @@ func (a *ActiveHealthChecks) Provision(ctx caddy.Context, h *Handler) error {
 		a.Fails = 1
 	}
 
+	if c := a.logger.Check(zapcore.InfoLevel, "active health checker configured"); c != nil {
+		c.Write(
+			zap.String("method", a.Method),
+			zap.Duration("interval", time.Duration(a.Interval)),
+			zap.Duration("timeout", timeout),
+			zap.Int("passes_threshold", a.Passes),
+			zap.Int("fails_threshold", a.Fails),
+			zap.Int("expect_status", a.ExpectStatus),
+			zap.String("expect_body", a.ExpectBody),
+			zap.Int("num_upstreams", len(h.Upstreams)),
+		)
+	}
+
 	return nil
 }
 
@@ -520,6 +533,9 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 		if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "HTTP request failed"); c != nil {
 			c.Write(
 				zap.String("host", hostAddr),
+				zap.String("upstream", upstream.Dial),
+				zap.String("method", h.HealthChecks.Active.Method),
+				zap.String("url", u.String()),
 				zap.Error(err),
 			)
 		}
@@ -544,6 +560,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 					zap.Int("status_code", resp.StatusCode),
 					zap.Int("expected_status", h.HealthChecks.Active.ExpectStatus),
 					zap.String("host", hostAddr),
+					zap.String("upstream", upstream.Dial),
 				)
 			}
 			markUnhealthy()
@@ -553,7 +570,9 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 		if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "status code out of tolerances"); c != nil {
 			c.Write(
 				zap.Int("status_code", resp.StatusCode),
+				zap.String("expected_range", "2xx"),
 				zap.String("host", hostAddr),
+				zap.String("upstream", upstream.Dial),
 			)
 		}
 		markUnhealthy()
@@ -567,6 +586,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "failed to read response body"); c != nil {
 				c.Write(
 					zap.String("host", hostAddr),
+					zap.String("upstream", upstream.Dial),
 					zap.Error(err),
 				)
 			}
@@ -577,6 +597,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "response body failed expectations"); c != nil {
 				c.Write(
 					zap.String("host", hostAddr),
+					zap.String("upstream", upstream.Dial),
 					zap.String("expected_body_pattern", h.HealthChecks.Active.ExpectBody),
 				)
 			}
@@ -609,9 +630,10 @@ func (h *Handler) countFailure(upstream *Upstream) {
 	// count failure immediately
 	err := upstream.Host.countFail(1)
 	if err != nil {
-		if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not count failure"); c != nil {
+		if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not count passive health failure"); c != nil {
 			c.Write(
-				zap.String("host", upstream.Dial),
+				zap.String("upstream", upstream.Dial),
+				zap.Duration("fail_duration", failDuration),
 				zap.Error(err),
 			)
 		}
@@ -640,9 +662,9 @@ func (h *Handler) countFailure(upstream *Upstream) {
 		}
 		err := host.countFail(-1)
 		if err != nil {
-			if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not forget failure"); c != nil {
+			if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not forget passive health failure"); c != nil {
 				c.Write(
-					zap.String("host", upstream.Dial),
+					zap.String("upstream", upstream.Dial),
 					zap.Error(err),
 				)
 			}
