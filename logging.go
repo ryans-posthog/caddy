@@ -814,6 +814,22 @@ type ConfiguresFormatterDefault interface {
 	ConfigureDefaultFormat(WriterOpener) error
 }
 
+// LogRecovery logs a panic recovery with structured fields. It is intended
+// to be called inside a deferred recover block to replace unstructured
+// log.Printf("[PANIC]") calls with structured zap logging.
+//
+//	defer func() {
+//		if err := recover(); err != nil {
+//			caddy.LogRecovery(logger, "description", err)
+//		}
+//	}()
+func LogRecovery(logger *zap.Logger, description string, err any) {
+	logger.Error(description,
+		zap.Any("panic", err),
+		zap.Stack("stack"),
+	)
+}
+
 const DefaultLoggerName = "default"
 
 // Interface guards

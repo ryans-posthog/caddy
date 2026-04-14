@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"runtime/debug"
 	"time"
 
 	"github.com/caddyserver/certmagic"
@@ -209,10 +208,7 @@ func (s *Provider) rotateKeys(oldSTEK distributedSTEK) (distributedSTEK, error) 
 func (s *Provider) rotate(doneChan <-chan struct{}, keysChan chan<- [][32]byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			s.logger.Error("panic during distributed STEK rotation",
-				zap.Any("panic", err),
-				zap.String("stack", string(debug.Stack())),
-			)
+			caddy.LogRecovery(s.logger, "distributed STEK rotation", err)
 		}
 	}()
 	for {
@@ -220,6 +216,7 @@ func (s *Provider) rotate(doneChan <-chan struct{}, keysChan chan<- [][32]byte) 
 		case <-s.timer.C:
 			dstek, err := s.getSTEK()
 			if err != nil {
+				// TODO: improve this handling
 				s.logger.Error("loading STEK", zap.Error(err))
 				continue
 			}

@@ -15,7 +15,6 @@
 package standardstek
 
 import (
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -92,10 +91,7 @@ func (s *standardSTEKProvider) Next(doneChan <-chan struct{}) <-chan [][32]byte 
 func (s *standardSTEKProvider) rotate(doneChan <-chan struct{}, keysChan chan<- [][32]byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			s.logger.Error("panic during standard STEK rotation",
-				zap.Any("panic", err),
-				zap.String("stack", string(debug.Stack())),
-			)
+			caddy.LogRecovery(s.logger, "standard STEK rotation", err)
 		}
 	}()
 	for {

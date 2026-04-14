@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -125,10 +124,7 @@ func (s *SessionTicketService) start() error {
 func (s *SessionTicketService) stayUpdated() {
 	defer func() {
 		if err := recover(); err != nil {
-			s.logger.Error("panic in session ticket service",
-				zap.Any("panic", err),
-				zap.String("stack", string(debug.Stack())),
-			)
+			caddy.LogRecovery(s.logger, "session ticket service", err)
 		}
 	}()
 
