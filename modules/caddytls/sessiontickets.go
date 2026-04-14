@@ -20,10 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/caddyserver/caddy/v2"
 )
@@ -52,11 +53,13 @@ type SessionTicketService struct {
 	stopChan    chan struct{}
 	currentKeys [][32]byte
 	mu          *sync.Mutex
+	logger      *zap.Logger
 }
 
 func (s *SessionTicketService) provision(ctx caddy.Context) error {
 	s.configs = make(map[*tls.Config]struct{})
 	s.mu = new(sync.Mutex)
+	s.logger = ctx.Logger()
 
 	// establish sane defaults
 	if s.RotationInterval == 0 {
@@ -122,7 +125,10 @@ func (s *SessionTicketService) start() error {
 func (s *SessionTicketService) stayUpdated() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("[PANIC] session ticket service: %v\n%s", err, debug.Stack())
+			s.logger.Error("panic in session ticket service",
+				zap.Any("panic", err),
+				zap.String("stack", string(debug.Stack())),
+			)
 		}
 	}()
 

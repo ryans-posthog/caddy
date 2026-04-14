@@ -15,10 +15,11 @@
 package standardstek
 
 import (
-	"log"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
@@ -31,6 +32,7 @@ func init() {
 type standardSTEKProvider struct {
 	stekConfig *caddytls.SessionTicketService
 	timer      *time.Timer
+	logger     *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -39,6 +41,12 @@ func (standardSTEKProvider) CaddyModule() caddy.ModuleInfo {
 		ID:  "tls.stek.standard",
 		New: func() caddy.Module { return new(standardSTEKProvider) },
 	}
+}
+
+// Provision sets up the logger for s.
+func (s *standardSTEKProvider) Provision(ctx caddy.Context) error {
+	s.logger = ctx.Logger()
+	return nil
 }
 
 // Initialize sets the configuration for s and returns the starting keys.
@@ -84,7 +92,10 @@ func (s *standardSTEKProvider) Next(doneChan <-chan struct{}) <-chan [][32]byte 
 func (s *standardSTEKProvider) rotate(doneChan <-chan struct{}, keysChan chan<- [][32]byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("[PANIC] standard STEK rotation: %v\n%s", err, debug.Stack())
+			s.logger.Error("panic during standard STEK rotation",
+				zap.Any("panic", err),
+				zap.String("stack", string(debug.Stack())),
+			)
 		}
 	}()
 	for {
@@ -99,8 +110,7 @@ func (s *standardSTEKProvider) rotate(doneChan <-chan struct{}, keysChan chan<- 
 			var err error
 			keysCopy, err = s.stekConfig.RotateSTEKs(keysCopy)
 			if err != nil {
-				// TODO: improve this handling
-				log.Printf("[ERROR] Generating STEK: %v", err)
+				s.logger.Error("generating STEK", zap.Error(err))
 				continue
 			}
 

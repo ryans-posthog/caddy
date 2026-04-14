@@ -29,11 +29,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"runtime/debug"
 	"time"
 
 	"github.com/caddyserver/certmagic"
+	"go.uber.org/zap"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
@@ -57,6 +57,7 @@ type Provider struct {
 	stekConfig *caddytls.SessionTicketService
 	timer      *time.Timer
 	ctx        caddy.Context
+	logger     *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -70,6 +71,7 @@ func (Provider) CaddyModule() caddy.ModuleInfo {
 // Provision provisions s.
 func (s *Provider) Provision(ctx caddy.Context) error {
 	s.ctx = ctx
+	s.logger = ctx.Logger()
 
 	// unpack the storage module to use, if different from the default
 	if s.Storage != nil {
@@ -207,7 +209,10 @@ func (s *Provider) rotateKeys(oldSTEK distributedSTEK) (distributedSTEK, error) 
 func (s *Provider) rotate(doneChan <-chan struct{}, keysChan chan<- [][32]byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("[PANIC] distributed STEK rotation: %v\n%s", err, debug.Stack())
+			s.logger.Error("panic during distributed STEK rotation",
+				zap.Any("panic", err),
+				zap.String("stack", string(debug.Stack())),
+			)
 		}
 	}()
 	for {
@@ -215,8 +220,7 @@ func (s *Provider) rotate(doneChan <-chan struct{}, keysChan chan<- [][32]byte) 
 		case <-s.timer.C:
 			dstek, err := s.getSTEK()
 			if err != nil {
-				// TODO: improve this handling
-				log.Printf("[ERROR] Loading STEK: %v", err)
+				s.logger.Error("loading STEK", zap.Error(err))
 				continue
 			}
 
