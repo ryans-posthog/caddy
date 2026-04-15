@@ -506,11 +506,21 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 	}
 
 	// do the request, being careful to tame the response body
+	start := time.Now()
+	if c := h.HealthChecks.Active.logger.Check(zapcore.DebugLevel, "starting health check request"); c != nil {
+		c.Write(
+			zap.String("host", hostAddr),
+			zap.String("url", req.URL.String()),
+			zap.String("method", req.Method),
+		)
+	}
 	resp, err := h.HealthChecks.Active.httpClient.Do(req) //nolint:gosec // no SSRF
+	duration := time.Since(start)
 	if err != nil {
 		if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "HTTP request failed"); c != nil {
 			c.Write(
 				zap.String("host", hostAddr),
+				zap.Duration("duration", duration),
 				zap.Error(err),
 			)
 		}
@@ -534,6 +544,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 				c.Write(
 					zap.Int("status_code", resp.StatusCode),
 					zap.String("host", hostAddr),
+					zap.Duration("duration", duration),
 				)
 			}
 			markUnhealthy()
@@ -544,6 +555,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			c.Write(
 				zap.Int("status_code", resp.StatusCode),
 				zap.String("host", hostAddr),
+				zap.Duration("duration", duration),
 			)
 		}
 		markUnhealthy()
@@ -557,6 +569,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "failed to read response body"); c != nil {
 				c.Write(
 					zap.String("host", hostAddr),
+					zap.Duration("duration", duration),
 					zap.Error(err),
 				)
 			}
@@ -567,6 +580,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 			if c := h.HealthChecks.Active.logger.Check(zapcore.InfoLevel, "response body failed expectations"); c != nil {
 				c.Write(
 					zap.String("host", hostAddr),
+					zap.Duration("duration", duration),
 				)
 			}
 			markUnhealthy()
@@ -575,6 +589,13 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 	}
 
 	// passed health check parameters, so mark as healthy
+	if c := h.HealthChecks.Active.logger.Check(zapcore.DebugLevel, "health check passed"); c != nil {
+		c.Write(
+			zap.String("host", hostAddr),
+			zap.Int("status_code", resp.StatusCode),
+			zap.Duration("duration", duration),
+		)
+	}
 	markHealthy()
 
 	return nil
