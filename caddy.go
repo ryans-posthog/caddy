@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -741,7 +740,9 @@ func unsyncedStop(ctx Context) {
 	for name, a := range ctx.cfg.apps {
 		err := a.Stop()
 		if err != nil {
-			log.Printf("[ERROR] stop %s: %v", name, err)
+			Log().Error("failed to stop app",
+				zap.String("app", name),
+				zap.Error(err))
 		}
 	}
 

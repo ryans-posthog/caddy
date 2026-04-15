@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"reflect"
 	"sync"
@@ -84,7 +83,10 @@ func NewContextWithCause(ctx Context) (Context, context.CancelCauseFunc) {
 				if cu, ok := inst.(CleanerUpper); ok {
 					err := cu.Cleanup()
 					if err != nil {
-						log.Printf("[ERROR] %s (%p): cleanup: %v", modName, inst, err)
+						Log().Error("module cleanup error",
+							zap.String("module", modName),
+							zap.String("pointer", fmt.Sprintf("%p", inst)),
+							zap.Error(err))
 					}
 				}
 			}
@@ -379,9 +381,8 @@ func (ctx Context) LoadModuleByID(id string, rawMsg json.RawMessage) (any, error
 	// the module's concrete type is a slice or map; New() *should* return
 	// a pointer, otherwise unmarshaling errors or panics will occur
 	if rv := reflect.ValueOf(val); rv.Kind() != reflect.Ptr {
-		log.Printf("[WARNING] ModuleInfo.New() for module '%s' did not return a pointer,"+
-			" so we are using reflection to make a pointer instead; please fix this by"+
-			" using new(Type) or &Type notation in your module's New() function.", id)
+		Log().Warn("ModuleInfo.New() did not return a pointer; using reflection to make a pointer instead; please fix this by using new(Type) or &Type notation in your module's New() function",
+			zap.String("module", string(id)))
 		val = reflect.New(rv.Type()).Elem().Addr().Interface().(Module)
 	}
 
