@@ -279,7 +279,7 @@ func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, jso
 	delete(tmp, moduleNameKey)
 	result, err := json.Marshal(tmp)
 	if err != nil {
-		return "", nil, fmt.Errorf("re-encoding module configuration: %v", err)
+		return "", nil, fmt.Errorf("re-encoding module configuration: %w", err)
 	}
 
 	return moduleName, result, nil

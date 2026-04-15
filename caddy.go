@@ -213,7 +213,7 @@ func changeConfig(method, path string, input []byte, ifMatchHeader string, force
 	if err != nil {
 		return APIError{
 			HTTPStatus: http.StatusBadRequest,
-			Err:        fmt.Errorf("encoding new config: %v", err),
+			Err:        fmt.Errorf("encoding new config: %w", err),
 		}
 	}
 
@@ -239,7 +239,7 @@ func changeConfig(method, path string, input []byte, ifMatchHeader string, force
 		}
 		return APIError{
 			HTTPStatus: http.StatusBadRequest,
-			Err:        fmt.Errorf("indexing config: %v", err),
+			Err:        fmt.Errorf("indexing config: %w", err),
 		}
 	}
 
@@ -262,7 +262,7 @@ func changeConfig(method, path string, input []byte, ifMatchHeader string, force
 			rawCfg[rawConfigKey] = nil
 		}
 
-		return fmt.Errorf("loading new config: %v", err)
+		return fmt.Errorf("loading new config: %w", err)
 	}
 
 	// success, so update our stored copy of the encoded
@@ -463,7 +463,7 @@ func run(newCfg *Config, start bool) (Context, error) {
 							err, otherAppName, err2)
 					}
 				}
-				return fmt.Errorf("%s app module: start: %v", name, err)
+				return fmt.Errorf("%s app module: start: %w", name, err)
 			}
 			started = append(started, name)
 		}
@@ -549,11 +549,11 @@ func provisionContext(newCfg *Config, replaceAdminServer bool) (Context, error) 
 		if newCfg.StorageRaw != nil {
 			val, err := ctx.LoadModule(newCfg, "StorageRaw")
 			if err != nil {
-				return fmt.Errorf("loading storage module: %v", err)
+				return fmt.Errorf("loading storage module: %w", err)
 			}
 			stor, err := val.(StorageConverter).CertMagicStorage()
 			if err != nil {
-				return fmt.Errorf("creating storage value: %v", err)
+				return fmt.Errorf("creating storage value: %w", err)
 			}
 			newCfg.storage = stor
 		}
@@ -573,7 +573,7 @@ func provisionContext(newCfg *Config, replaceAdminServer bool) (Context, error) 
 	if replaceAdminServer {
 		err = replaceLocalAdminServer(newCfg, ctx)
 		if err != nil {
-			return ctx, fmt.Errorf("starting caddy administration endpoint: %v", err)
+			return ctx, fmt.Errorf("starting caddy administration endpoint: %w", err)
 		}
 	}
 
@@ -606,13 +606,13 @@ func finishSettingUp(ctx Context, cfg *Config) error {
 	// but before remote management which may depend on these creds)
 	err := manageIdentity(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("provisioning remote admin endpoint: %v", err)
+		return fmt.Errorf("provisioning remote admin endpoint: %w", err)
 	}
 
 	// replace any remote admin endpoint
 	err = replaceRemoteAdminServer(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("provisioning remote admin endpoint: %v", err)
+		return fmt.Errorf("provisioning remote admin endpoint: %w", err)
 	}
 
 	// if dynamic config is requested, set that up and run it
@@ -675,7 +675,7 @@ func finishSettingUp(ctx Context, cfg *Config) error {
 			// if no LoadDelay is provided, will load config synchronously
 			loadedConfig, err := val.(ConfigLoader).LoadConfig(ctx)
 			if err != nil {
-				return fmt.Errorf("loading dynamic config from %T: %v", val, err)
+				return fmt.Errorf("loading dynamic config from %T: %w", val, err)
 			}
 			// do this in a goroutine so current config can finish being loaded; otherwise deadlock
 			go func() { _ = runLoadedConfig(loadedConfig) }()
@@ -1143,7 +1143,7 @@ type Event struct {
 func NewEvent(ctx Context, name string, data map[string]any) (Event, error) {
 	id, err := uuid.NewRandom()
 	if err != nil {
-		return Event{}, fmt.Errorf("generating new event ID: %v", err)
+		return Event{}, fmt.Errorf("generating new event ID: %w", err)
 	}
 	name = strings.ToLower(name)
 	return Event{

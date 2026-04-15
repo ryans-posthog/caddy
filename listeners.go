@@ -196,7 +196,7 @@ func (na NetworkAddress) listen(ctx context.Context, portOffset uint, config net
 		if !isAbstractUnixSocket {
 			err = os.Chmod(address, unixFileMode)
 			if err != nil {
-				return nil, fmt.Errorf("unable to set permissions (%s) on %s: %v", unixFileMode, address, err)
+				return nil, fmt.Errorf("unable to set permissions (%s) on %s: %w", unixFileMode, address, err)
 			}
 		}
 	}
@@ -352,11 +352,11 @@ func ParseNetworkAddressWithDefaults(addr, defaultNetwork string, defaultPort ui
 		}
 		start, err = strconv.ParseUint(before, 10, 16)
 		if err != nil {
-			return NetworkAddress{}, fmt.Errorf("invalid start port: %v", err)
+			return NetworkAddress{}, fmt.Errorf("invalid start port: %w", err)
 		}
 		end, err = strconv.ParseUint(after, 10, 16)
 		if err != nil {
-			return NetworkAddress{}, fmt.Errorf("invalid end port: %v", err)
+			return NetworkAddress{}, fmt.Errorf("invalid end port: %w", err)
 		}
 		if end < start {
 			return NetworkAddress{}, fmt.Errorf("end port must not be less than start port")

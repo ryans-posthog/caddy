@@ -41,7 +41,7 @@ func listenReusable(ctx context.Context, lnKey string, network, address string, 
 	if fd {
 		socketFd, err := strconv.ParseUint(address, 0, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("invalid file descriptor: %v", err)
+			return nil, fmt.Errorf("invalid file descriptor: %w", err)
 		}
 
 		func() {

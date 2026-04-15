@@ -96,7 +96,7 @@ func (logging *Logging) openLogs(ctx Context) error {
 	if logging.Sink != nil {
 		err := logging.Sink.provision(ctx, logging)
 		if err != nil {
-			return fmt.Errorf("setting up sink log: %v", err)
+			return fmt.Errorf("setting up sink log: %w", err)
 		}
 	}
 
@@ -148,7 +148,7 @@ func (logging *Logging) setupNewDefault(ctx Context) error {
 		var err error
 		newDefault, err = newDefaultProductionLog()
 		if err != nil {
-			return fmt.Errorf("setting up default Caddy log: %v", err)
+			return fmt.Errorf("setting up default Caddy log: %w", err)
 		}
 		logging.Logs[DefaultLoggerName] = newDefault.CustomLog
 	}
@@ -156,13 +156,13 @@ func (logging *Logging) setupNewDefault(ctx Context) error {
 	// options for the default logger
 	options, err := newDefault.CustomLog.buildOptions()
 	if err != nil {
-		return fmt.Errorf("setting up default log: %v", err)
+		return fmt.Errorf("setting up default log: %w", err)
 	}
 
 	// set up this new log
 	err = newDefault.CustomLog.provision(ctx, logging)
 	if err != nil {
-		return fmt.Errorf("setting up default log: %v", err)
+		return fmt.Errorf("setting up default log: %w", err)
 	}
 
 	filteringCore := &filteringCore{newDefault.CustomLog.core, newDefault.CustomLog}
@@ -343,7 +343,7 @@ func (cl *BaseLog) provisionCommon(ctx Context, logging *Logging) error {
 	if cl.WriterRaw != nil {
 		mod, err := ctx.LoadModule(cl, "WriterRaw")
 		if err != nil {
-			return fmt.Errorf("loading log writer module: %v", err)
+			return fmt.Errorf("loading log writer module: %w", err)
 		}
 		cl.writerOpener = mod.(WriterOpener)
 	}
@@ -365,7 +365,7 @@ func (cl *BaseLog) provisionCommon(ctx Context, logging *Logging) error {
 	if cl.EncoderRaw != nil {
 		mod, err := ctx.LoadModule(cl, "EncoderRaw")
 		if err != nil {
-			return fmt.Errorf("loading log encoder module: %v", err)
+			return fmt.Errorf("loading log encoder module: %w", err)
 		}
 		cl.encoder = mod.(zapcore.Encoder)
 
@@ -374,7 +374,7 @@ func (cl *BaseLog) provisionCommon(ctx Context, logging *Logging) error {
 		// pass it down as a secondary provisioning step
 		if cfd, ok := mod.(ConfiguresFormatterDefault); ok {
 			if err := cfd.ConfigureDefaultFormat(cl.writerOpener); err != nil {
-				return fmt.Errorf("configuring default format for encoder module: %v", err)
+				return fmt.Errorf("configuring default format for encoder module: %w", err)
 			}
 		}
 	}
@@ -385,7 +385,7 @@ func (cl *BaseLog) provisionCommon(ctx Context, logging *Logging) error {
 	if cl.CoreRaw != nil {
 		mod, err := ctx.LoadModule(cl, "CoreRaw")
 		if err != nil {
-			return fmt.Errorf("loading log core module: %v", err)
+			return fmt.Errorf("loading log core module: %w", err)
 		}
 		core := mod.(zapcore.Core)
 		cl.core = zapcore.NewTee(cl.core, core)
@@ -433,7 +433,7 @@ func (cl *BaseLog) buildOptions() ([]zap.Option, error) {
 	if cl.WithStacktrace != "" {
 		levelEnabler, err := parseLevel(cl.WithStacktrace)
 		if err != nil {
-			return options, fmt.Errorf("setting up default Caddy log: %v", err)
+			return options, fmt.Errorf("setting up default Caddy log: %w", err)
 		}
 		options = append(options, zap.AddStacktrace(levelEnabler))
 	}
@@ -752,7 +752,7 @@ func parseLevel(levelInput string) (zapcore.LevelEnabler, error) {
 	repl := NewReplacer()
 	level, err := repl.ReplaceOrErr(levelInput, true, true)
 	if err != nil {
-		return nil, fmt.Errorf("invalid log level: %v", err)
+		return nil, fmt.Errorf("invalid log level: %w", err)
 	}
 	level = strings.ToLower(level)
 

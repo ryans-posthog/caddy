@@ -230,7 +230,7 @@ func (ctx Context) LoadModule(structPointer any, fieldName string) (any, error) 
 			for i := 0; i < val.Len(); i++ {
 				val, err := ctx.loadModuleInline(inlineModuleKey, moduleNamespace, val.Index(i).Interface().(json.RawMessage))
 				if err != nil {
-					return nil, fmt.Errorf("position %d: %v", i, err)
+					return nil, fmt.Errorf("position %d: %w", i, err)
 				}
 				all = append(all, val)
 			}
@@ -248,7 +248,7 @@ func (ctx Context) LoadModule(structPointer any, fieldName string) (any, error) 
 				for j := 0; j < innerVal.Len(); j++ {
 					innerInnerVal, err := ctx.loadModuleInline(inlineModuleKey, moduleNamespace, innerVal.Index(j).Interface().(json.RawMessage))
 					if err != nil {
-						return nil, fmt.Errorf("position %d: %v", j, err)
+						return nil, fmt.Errorf("position %d: %w", j, err)
 					}
 					allInner = append(allInner, innerInnerVal)
 				}
@@ -323,7 +323,7 @@ func (ctx Context) loadModulesFromRegularMap(namespace, inlineModuleKey string, 
 		v := iter.Value()
 		mod, err := ctx.loadModuleInline(inlineModuleKey, namespace, v.Interface().(json.RawMessage))
 		if err != nil {
-			return nil, fmt.Errorf("key %s: %v", k, err)
+			return nil, fmt.Errorf("key %s: %w", k, err)
 		}
 		mods[k.String()] = mod
 	}
@@ -344,7 +344,7 @@ func (ctx Context) loadModuleMap(namespace string, val reflect.Value) (map[strin
 		}
 		val, err := ctx.LoadModuleByID(moduleName, v)
 		if err != nil {
-			return nil, fmt.Errorf("module name '%s': %v", k, err)
+			return nil, fmt.Errorf("module name '%s': %w", k, err)
 		}
 		all[k] = val
 	}
@@ -389,7 +389,7 @@ func (ctx Context) LoadModuleByID(id string, rawMsg json.RawMessage) (any, error
 	if len(rawMsg) > 0 {
 		err := StrictUnmarshalJSON(rawMsg, &val)
 		if err != nil {
-			return nil, fmt.Errorf("decoding module config: %s: %v", modInfo, err)
+			return nil, fmt.Errorf("decoding module config: %s: %w", modInfo, err)
 		}
 	}
 
@@ -433,7 +433,7 @@ func (ctx Context) LoadModuleByID(id string, rawMsg json.RawMessage) (any, error
 					err = fmt.Errorf("%v; additionally, cleanup: %v", err, err2)
 				}
 			}
-			return nil, fmt.Errorf("provision %s: %v", modInfo, err)
+			return nil, fmt.Errorf("provision %s: %w", modInfo, err)
 		}
 	}
 
@@ -447,7 +447,7 @@ func (ctx Context) LoadModuleByID(id string, rawMsg json.RawMessage) (any, error
 					err = fmt.Errorf("%v; additionally, cleanup: %v", err, err2)
 				}
 			}
-			return nil, fmt.Errorf("%s: invalid configuration: %v", modInfo, err)
+			return nil, fmt.Errorf("%s: invalid configuration: %w", modInfo, err)
 		}
 	}
 
@@ -483,7 +483,7 @@ func (ctx Context) loadModuleInline(moduleNameKey, moduleScope string, raw json.
 
 	val, err := ctx.LoadModuleByID(moduleScope+"."+moduleName, raw)
 	if err != nil {
-		return nil, fmt.Errorf("loading module '%s': %v", moduleName, err)
+		return nil, fmt.Errorf("loading module '%s': %w", moduleName, err)
 	}
 
 	return val, nil
@@ -505,7 +505,7 @@ func (ctx Context) loadModuleInline(moduleNameKey, moduleScope string, raw json.
 func (ctx Context) App(name string) (any, error) {
 	// if the app failed to load before, return the cached error
 	if err, ok := ctx.cfg.failedApps[name]; ok {
-		return nil, fmt.Errorf("loading %s app module: %v", name, err)
+		return nil, fmt.Errorf("loading %s app module: %w", name, err)
 	}
 	if app, ok := ctx.cfg.apps[name]; ok {
 		return app, nil
@@ -513,7 +513,7 @@ func (ctx Context) App(name string) (any, error) {
 	appRaw := ctx.cfg.AppsRaw[name]
 	modVal, err := ctx.LoadModuleByID(name, appRaw)
 	if err != nil {
-		return nil, fmt.Errorf("loading %s app module: %v", name, err)
+		return nil, fmt.Errorf("loading %s app module: %w", name, err)
 	}
 	if appRaw != nil {
 		ctx.cfg.AppsRaw[name] = nil // allow GC to deallocate
@@ -533,7 +533,7 @@ func (ctx Context) AppIfConfigured(name string) (any, error) {
 	}
 	// if the app failed to load before, return the cached error
 	if err, ok := ctx.cfg.failedApps[name]; ok {
-		return nil, fmt.Errorf("loading %s app module: %v", name, err)
+		return nil, fmt.Errorf("loading %s app module: %w", name, err)
 	}
 	if app, ok := ctx.cfg.apps[name]; ok {
 		return app, nil

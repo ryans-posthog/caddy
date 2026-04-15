@@ -572,7 +572,7 @@ func replaceRemoteAdminServer(ctx Context, cfg *Config) error {
 		for j, certBase64 := range accessControl.PublicKeys {
 			cert, err := decodeBase64DERCert(certBase64)
 			if err != nil {
-				return fmt.Errorf("access control %d public key %d: parsing base64 certificate DER: %v", i, j, err)
+				return fmt.Errorf("access control %d public key %d: parsing base64 certificate DER: %w", i, j, err)
 			}
 			accessControl.publicKeys = append(accessControl.publicKeys, cert.PublicKey)
 			clientCertPool.AddCert(cert)
@@ -757,7 +757,7 @@ func stopAdminServer(srv *http.Server) error {
 		if cause := context.Cause(ctx); cause != nil && errors.Is(err, context.DeadlineExceeded) {
 			err = cause
 		}
-		return fmt.Errorf("shutting down admin server: %v", err)
+		return fmt.Errorf("shutting down admin server: %w", err)
 	}
 	Log().Named("admin").Info("stopped previous server", zap.String("address", srv.Addr))
 	return nil
@@ -1065,7 +1065,7 @@ func handleConfig(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return APIError{
 					HTTPStatus: http.StatusBadRequest,
-					Err:        fmt.Errorf("reading request body: %v", err),
+					Err:        fmt.Errorf("reading request body: %w", err),
 				}
 			}
 			body = buf.Bytes()
@@ -1218,7 +1218,7 @@ traverseLoop:
 				case http.MethodGet:
 					err = enc.Encode(arr[idx])
 					if err != nil {
-						return fmt.Errorf("encoding config: %v", err)
+						return fmt.Errorf("encoding config: %w", err)
 					}
 				case http.MethodPost:
 					if ellipses {
@@ -1252,7 +1252,7 @@ traverseLoop:
 				case http.MethodGet:
 					err = enc.Encode(v[part])
 					if err != nil {
-						return fmt.Errorf("encoding config: %v", err)
+						return fmt.Errorf("encoding config: %w", err)
 					}
 				case http.MethodPost:
 					// if the part is an existing list, POST appends to
@@ -1383,14 +1383,14 @@ func (e APIError) Error() string {
 func parseAdminListenAddr(addr string, defaultAddr string) (NetworkAddress, error) {
 	input, err := NewReplacer().ReplaceOrErr(addr, true, true)
 	if err != nil {
-		return NetworkAddress{}, fmt.Errorf("replacing listen address: %v", err)
+		return NetworkAddress{}, fmt.Errorf("replacing listen address: %w", err)
 	}
 	if input == "" {
 		input = defaultAddr
 	}
 	listenAddr, err := ParseNetworkAddress(input)
 	if err != nil {
-		return NetworkAddress{}, fmt.Errorf("parsing listener address: %v", err)
+		return NetworkAddress{}, fmt.Errorf("parsing listener address: %w", err)
 	}
 	if listenAddr.PortRangeSize() != 1 {
 		return NetworkAddress{}, fmt.Errorf("must be exactly one listener address; cannot listen on: %s", listenAddr)
