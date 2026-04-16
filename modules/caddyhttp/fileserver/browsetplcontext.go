@@ -22,7 +22,6 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -221,27 +220,54 @@ func (l *browseTemplateContext) applySortAndLimit(sortParam, orderParam, limitPa
 	l.Sort = sortParam
 	l.Order = orderParam
 
-	if l.Order == "desc" {
-		switch l.Sort {
-		case sortByName:
-			sort.Sort(sort.Reverse(byName(*l)))
-		case sortByNameDirFirst:
-			sort.Sort(sort.Reverse(byNameDirFirst(*l)))
-		case sortBySize:
-			sort.Sort(sort.Reverse(bySize(*l)))
-		case sortByTime:
-			sort.Sort(sort.Reverse(byTime(*l)))
+	var cmp func(a, b fileInfo) int
+	switch l.Sort {
+	case sortByName:
+		cmp = func(a, b fileInfo) int {
+			return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 		}
-	} else {
-		switch l.Sort {
-		case sortByName:
-			sort.Sort(byName(*l))
-		case sortByNameDirFirst:
-			sort.Sort(byNameDirFirst(*l))
-		case sortBySize:
-			sort.Sort(bySize(*l))
-		case sortByTime:
-			sort.Sort(byTime(*l))
+	case sortByNameDirFirst:
+		cmp = func(a, b fileInfo) int {
+			if a.IsDir != b.IsDir {
+				if a.IsDir {
+					return -1
+				}
+				return 1
+			}
+			return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+		}
+	case sortBySize:
+		cmp = func(a, b fileInfo) int {
+			const directoryOffset = -1 << 31 // = -math.MinInt32
+			iSize, jSize := a.Size, b.Size
+			if a.IsDir {
+				iSize = directoryOffset
+			}
+			if b.IsDir {
+				jSize = directoryOffset
+			}
+			if a.IsDir && b.IsDir {
+				return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+			}
+			switch {
+			case iSize < jSize:
+				return -1
+			case iSize > jSize:
+				return 1
+			default:
+				return 0
+			}
+		}
+	case sortByTime:
+		cmp = func(a, b fileInfo) int {
+			return a.ModTime.Compare(b.ModTime)
+		}
+	}
+	if cmp != nil {
+		if l.Order == "desc" {
+			slices.SortFunc(l.Items, func(a, b fileInfo) int { return cmp(b, a) })
+		} else {
+			slices.SortFunc(l.Items, cmp)
 		}
 	}
 
@@ -317,60 +343,6 @@ func (btc browseTemplateContext) HumanTotalFileSizeFollowingSymlinks() string {
 func (fi fileInfo) HumanModTime(format string) string {
 	return fi.ModTime.Format(format)
 }
-
-type (
-	byName         browseTemplateContext
-	byNameDirFirst browseTemplateContext
-	bySize         browseTemplateContext
-	byTime         browseTemplateContext
-)
-
-func (l byName) Len() int      { return len(l.Items) }
-func (l byName) Swap(i, j int) { l.Items[i], l.Items[j] = l.Items[j], l.Items[i] }
-
-func (l byName) Less(i, j int) bool {
-	return strings.ToLower(l.Items[i].Name) < strings.ToLower(l.Items[j].Name)
-}
-
-func (l byNameDirFirst) Len() int      { return len(l.Items) }
-func (l byNameDirFirst) Swap(i, j int) { l.Items[i], l.Items[j] = l.Items[j], l.Items[i] }
-
-func (l byNameDirFirst) Less(i, j int) bool {
-	// sort by name if both are dir or file
-	if l.Items[i].IsDir == l.Items[j].IsDir {
-		return strings.ToLower(l.Items[i].Name) < strings.ToLower(l.Items[j].Name)
-	}
-	// sort dir ahead of file
-	return l.Items[i].IsDir
-}
-
-func (l bySize) Len() int      { return len(l.Items) }
-func (l bySize) Swap(i, j int) { l.Items[i], l.Items[j] = l.Items[j], l.Items[i] }
-
-func (l bySize) Less(i, j int) bool {
-	const directoryOffset = -1 << 31 // = -math.MinInt32
-
-	iSize, jSize := l.Items[i].Size, l.Items[j].Size
-
-	// directory sizes depend on the file system; to
-	// provide a consistent experience, put them up front
-	// and sort them by name
-	if l.Items[i].IsDir {
-		iSize = directoryOffset
-	}
-	if l.Items[j].IsDir {
-		jSize = directoryOffset
-	}
-	if l.Items[i].IsDir && l.Items[j].IsDir {
-		return strings.ToLower(l.Items[i].Name) < strings.ToLower(l.Items[j].Name)
-	}
-
-	return iSize < jSize
-}
-
-func (l byTime) Len() int           { return len(l.Items) }
-func (l byTime) Swap(i, j int)      { l.Items[i], l.Items[j] = l.Items[j], l.Items[i] }
-func (l byTime) Less(i, j int) bool { return l.Items[i].ModTime.Before(l.Items[j].ModTime) }
 
 const (
 	sortByName         = "name"
