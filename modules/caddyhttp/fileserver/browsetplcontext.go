@@ -223,38 +223,13 @@ func (l *browseTemplateContext) applySortAndLimit(sortParam, orderParam, limitPa
 
 	switch l.Sort {
 	case sortByName:
-		slices.SortFunc(l.Items, func(a, b fileInfo) int {
-			return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
-		})
+		slices.SortFunc(l.Items, compareByName)
 	case sortByNameDirFirst:
-		slices.SortFunc(l.Items, func(a, b fileInfo) int {
-			if a.IsDir != b.IsDir {
-				if a.IsDir {
-					return -1
-				}
-				return 1
-			}
-			return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
-		})
+		slices.SortFunc(l.Items, compareByNameDirFirst)
 	case sortBySize:
-		slices.SortFunc(l.Items, func(a, b fileInfo) int {
-			const directoryOffset = -1 << 31
-			aSize, bSize := a.Size, b.Size
-			if a.IsDir {
-				aSize = directoryOffset
-			}
-			if b.IsDir {
-				bSize = directoryOffset
-			}
-			if a.IsDir && b.IsDir {
-				return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
-			}
-			return cmp.Compare(aSize, bSize)
-		})
+		slices.SortFunc(l.Items, compareBySize)
 	case sortByTime:
-		slices.SortFunc(l.Items, func(a, b fileInfo) int {
-			return a.ModTime.Compare(b.ModTime)
-		})
+		slices.SortFunc(l.Items, compareByTime)
 	}
 
 	if l.Order == "desc" {
@@ -332,6 +307,45 @@ func (btc browseTemplateContext) HumanTotalFileSizeFollowingSymlinks() string {
 // as a human-readable string given by format.
 func (fi fileInfo) HumanModTime(format string) string {
 	return fi.ModTime.Format(format)
+}
+
+func compareByName(a, b fileInfo) int {
+	return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+}
+
+func compareByNameDirFirst(a, b fileInfo) int {
+	if a.IsDir != b.IsDir {
+		if a.IsDir {
+			return -1
+		}
+		return 1
+	}
+	return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+}
+
+func compareBySize(a, b fileInfo) int {
+	const directoryOffset = -1 << 31 // = -math.MinInt32
+
+	aSize, bSize := a.Size, b.Size
+
+	// directory sizes depend on the file system; to
+	// provide a consistent experience, put them up front
+	// and sort them by name
+	if a.IsDir {
+		aSize = directoryOffset
+	}
+	if b.IsDir {
+		bSize = directoryOffset
+	}
+	if a.IsDir && b.IsDir {
+		return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	}
+
+	return cmp.Compare(aSize, bSize)
+}
+
+func compareByTime(a, b fileInfo) int {
+	return a.ModTime.Compare(b.ModTime)
 }
 
 const (
