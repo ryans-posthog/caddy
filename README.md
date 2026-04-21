@@ -117,7 +117,18 @@ $ cd caddy/cmd/caddy/
 $ go build
 ```
 
+Once built, you can verify the binary and run it against a config file:
+
+```bash
+$ ./caddy version
+$ ./caddy run --config /path/to/Caddyfile
+```
+
+`caddy run` runs in the foreground and blocks until stopped. For the full list of commands (including `start`, `stop`, `reload`, and `validate`), run `./caddy help` or see the [command-line docs](https://caddyserver.com/docs/command-line).
+
 When you run Caddy, it may try to bind to low ports unless otherwise specified in your config. If your OS requires elevated privileges for this, you will need to give your new binary permission to do so. On Linux, this can be done easily with: `sudo setcap cap_net_bind_service=+ep ./caddy`
+
+On macOS there is no `setcap` equivalent; either bind to ports ≥ 1024 in development, or run Caddy with `sudo`. On Windows no capability flag is needed, though you may be prompted for admin privileges or firewall approval the first time Caddy listens on a new port.
 
 If you prefer to use `go run` which only creates temporary binaries, you can still do this with the included `setcap.sh` like so:
 
@@ -139,6 +150,10 @@ Then you can run the tests in all modules or a specific one:
 $ go test ./...
 $ go test ./modules/caddyhttp/tracing/
 ```
+
+CI runs the suite with the race detector; you can do the same locally with `go test -race ./...`. Integration tests that exercise a running Caddy server live under [`caddytest/`](caddytest/) and run as part of `go test ./...`.
+
+This repo ships a [`.golangci.yml`](.golangci.yml) config, so [`golangci-lint run`](https://golangci-lint.run/) will lint the codebase with the project's preferred settings. A [`.pre-commit-config.yaml`](.pre-commit-config.yaml) is also provided — install [pre-commit](https://pre-commit.com/) and run `pre-commit install` once to wire up the hooks (gitleaks, golangci-lint, shellcheck, and whitespace/EOF fixers) so they run automatically on each commit.
 
 ### With version information and/or plugins
 
