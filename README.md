@@ -99,6 +99,68 @@
 
 The simplest, cross-platform way to get started is to download Caddy from [GitHub Releases](https://github.com/caddyserver/caddy/releases) and place the executable file in your PATH.
 
+Caddy is also published through several package managers. The package repositories for Debian-based and RPM-based distros are hosted on [Cloudsmith](https://cloudsmith.io/~caddy/repos/).
+
+### Debian, Ubuntu, Raspbian
+
+```bash
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+sudo chmod o+r /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy
+```
+
+### Fedora
+
+```bash
+dnf install dnf5-plugins
+dnf copr enable @caddy/caddy
+dnf install caddy
+```
+
+### CentOS, RHEL
+
+```bash
+dnf install dnf-plugins-core
+dnf copr enable @caddy/caddy
+dnf install caddy
+```
+
+### Arch, Manjaro, Parabola
+
+```bash
+pacman -Syu caddy
+```
+
+### macOS (Homebrew)
+
+```bash
+brew install caddy
+```
+
+### Windows (Scoop)
+
+```bash
+scoop install caddy
+```
+
+### Windows (Chocolatey)
+
+```bash
+choco install caddy
+```
+
+### Docker
+
+```bash
+docker pull caddy
+```
+
+The official image is published on [Docker Hub](https://hub.docker.com/_/caddy).
+
 See [our online documentation](https://caddyserver.com/docs/install) for other install instructions.
 
 ## Build from source
