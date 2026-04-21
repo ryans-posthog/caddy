@@ -169,6 +169,53 @@ The [Caddy website](https://caddyserver.com/docs/) has documentation that includ
 
 If you've only got a minute, [the website has several quick-start tutorials](https://caddyserver.com/docs/quick-starts) to choose from! However, after finishing a quick-start tutorial, please read more documentation to understand how the software works. 🙂
 
+### Examples
+
+Once `caddy` is on your `PATH`, the snippets below cover the most common ways to run it. They are intentionally minimal — see the linked docs above for full tutorials.
+
+**Serve the current directory as a static file server** on `http://localhost:8080`:
+
+```bash
+$ caddy file-server --listen :8080
+```
+
+**Run an ad-hoc reverse proxy** that forwards `:8080` to a local backend on `:3000`:
+
+```bash
+$ caddy reverse-proxy --from :8080 --to 127.0.0.1:3000
+```
+
+**Run from a Caddyfile.** Create a file named `Caddyfile` in your working directory:
+
+```caddyfile
+localhost {
+	respond "Hello, Caddy!"
+}
+```
+
+Then start Caddy in the foreground — it picks up `./Caddyfile` automatically:
+
+```bash
+$ caddy run
+```
+
+Use `caddy start` instead to run it in the background.
+
+**Validate and hot-reload a config** without restarting the server:
+
+```bash
+$ caddy validate --config Caddyfile
+$ caddy reload --config Caddyfile
+```
+
+**Inspect the live config over the admin API** (enabled by default on `localhost:2019`):
+
+```bash
+$ curl http://localhost:2019/config/
+```
+
+See [the admin API docs](https://caddyserver.com/docs/api) for the full surface — the same endpoint accepts `POST`/`PATCH` to change config at runtime.
+
 
 
 
