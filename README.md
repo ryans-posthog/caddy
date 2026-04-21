@@ -67,6 +67,7 @@
 	- [For development](#for-development)
 	- [With version information and/or plugins](#with-version-information-andor-plugins)
 - [Quick start](#quick-start)
+- [Configuration examples](#configuration-examples)
 - [Overview](#overview)
 - [Full documentation](#full-documentation)
 - [Getting help](#getting-help)
@@ -168,6 +169,115 @@ The [Caddy website](https://caddyserver.com/docs/) has documentation that includ
 **We recommend that all users -- regardless of experience level -- do our [Getting Started](https://caddyserver.com/docs/getting-started) guide to become familiar with using Caddy.**
 
 If you've only got a minute, [the website has several quick-start tutorials](https://caddyserver.com/docs/quick-starts) to choose from! However, after finishing a quick-start tutorial, please read more documentation to understand how the software works. 🙂
+
+
+
+
+## Configuration examples
+
+The snippets below are runnable against a locally built `caddy` binary (see [Build from source](#build-from-source)). They illustrate the most common ways Caddy is configured; for the full reference, see [caddyserver.com/docs](https://caddyserver.com/docs/).
+
+### Zero-config one-liners
+
+Caddy ships with a few subcommands that skip config files entirely. Great for quick experiments:
+
+```bash
+# Serve the current directory over HTTP on :2015
+caddy file-server --listen :2015
+
+# Proxy :8080 to a backend on :9000
+caddy reverse-proxy --from :8080 --to :9000
+```
+
+### Minimal Caddyfile: static file server
+
+Create a file named `Caddyfile` next to a directory called `site/`:
+
+```caddyfile
+:2015
+
+root * ./site
+file_server
+```
+
+Then run `caddy run` in the same directory. Caddy serves `./site` on `http://localhost:2015`.
+
+### Caddyfile: reverse proxy with automatic HTTPS
+
+```caddyfile
+example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Running `caddy run` on a host reachable at `example.com` will automatically obtain and renew a TLS certificate (ZeroSSL or Let's Encrypt) and proxy requests to the local backend on port 8080. No extra TLS configuration needed.
+
+### Caddyfile: multiple sites and path routing
+
+```caddyfile
+app.example.com {
+    reverse_proxy localhost:8080
+
+    handle_path /static/* {
+        root * /var/www/static
+        file_server
+    }
+}
+
+docs.example.com {
+    root * /var/www/docs
+    file_server
+}
+```
+
+One binary, two virtual hosts, with `/static/*` stripped and served from disk while everything else is proxied to the app.
+
+### Equivalent JSON config
+
+Caddy's native configuration format is JSON; the Caddyfile is a convenience adapter on top of it. The reverse-proxy example above is equivalent to:
+
+```json
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [":443"],
+          "routes": [
+            {
+              "match": [{"host": ["example.com"]}],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [{"dial": "localhost:8080"}]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+Load it with `caddy run --config config.json`.
+
+### Interacting with the admin API
+
+While Caddy is running, the admin API is available on `localhost:2019` by default:
+
+```bash
+# Inspect the current running config
+curl localhost:2019/config/
+
+# Hot-reload a new JSON config without restarting
+curl -X POST localhost:2019/load \
+     -H "Content-Type: application/json" \
+     -d @config.json
+```
+
+See [the API docs](https://caddyserver.com/docs/api) for the full surface.
 
 
 
